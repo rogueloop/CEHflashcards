@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cybersecurity Flashcards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Flashcard flip animation */
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flashcard.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden; /* Safari */
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem; /* p-6 */
+            border-radius: 0.5rem; /* rounded-lg */
+            background-color: white; /* bg-white */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
+            overflow-y: auto; /* Add scroll for long content */
+        }
+        .flashcard-back {
+            transform: rotateY(180deg);
+        }
+        .card-label {
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 600; /* font-semibold */
+            color: #6b7280; /* text-gray-500 */
+            margin-bottom: 0.5rem; /* mb-2 */
+            flex-shrink: 0;
+        }
+        .card-content {
+            font-size: 1.125rem; /* text-lg */
+            color: #1f2937; /* text-gray-800 */
+            flex-grow: 1;
+        }
+        /* Progress Bar */
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e5e7eb; /* bg-gray-200 */
+            border-radius: 0.5rem; /* rounded-lg */
+            overflow: hidden;
+            height: 1rem; /* h-4 */
+            margin-bottom: 1rem; /* mb-4 */
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #3b82f6; /* bg-blue-500 */
+            transition: width 0.3s ease-in-out;
+            text-align: center;
+            color: white;
+            font-size: 0.75rem; /* text-xs */
+            line-height: 1rem; /* leading-4 */
+        }
+        /* Buttons */
+        .nav-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s, opacity 0.2s;
+            color: white;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            cursor: pointer;
+        }
+        .nav-button:hover:not(:disabled) {
+            filter: brightness(110%);
+        }
+        .nav-button:disabled {
+            background-color: #9ca3af; /* bg-gray-400 */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .flashcard {
+                min-height: 300px;
+                height: auto;
+            }
+             .flashcard-front, .flashcard-back {
+                 padding: 1rem;
+             }
+            .card-content {
+                font-size: 1rem;
+            }
+            .nav-button {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+            }
+            .button-container {
+                flex-direction: column;
+                gap: 0.75rem; /* Increased gap slightly */
+            }
+            .button-row {
+                width: 100%;
+                justify-content: space-around; /* Space out buttons in rows */
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-700 mb-4 text-center">Cybersecurity Flashcards</h1>
+
+    <div class="w-full max-w-xl">
+        <div id="progress-bar-container" class="progress-bar-container">
+            <div id="progress-bar" class="progress-bar" style="width: 0%;"></div>
+        </div>
+    </div>
+
+    <div id="card-counter" class="text-gray-600 mb-4 font-medium">Card 1 of X</div>
+
+    <div class="w-full max-w-xl mb-6">
+        <div id="flashcard" class="flashcard perspective bg-transparent rounded-lg h-64 md:h-80 cursor-pointer">
+            <div class="flashcard-inner">
+                <div class="flashcard-front">
+                    <span class="card-label">Question</span>
+                    <p id="question-text" class="card-content"></p>
+                </div>
+                <div class="flashcard-back">
+                    <span class="card-label">Answer</span>
+                    <p id="answer-text" class="card-content"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-col items-center justify-center gap-3 w-full max-w-xl button-container">
+        <div class="flex gap-4 w-full button-row">
+             <button id="prev-button" class="nav-button bg-blue-500 flex-1">Previous</button>
+             <button id="flip-button" class="nav-button bg-gray-500 flex-1">Flip Card</button>
+             <button id="next-button" class="nav-button bg-blue-500 flex-1">Next</button>
+        </div>
+         <div class="flex gap-4 w-full button-row">
+             <button id="missed-button" class="nav-button bg-red-500 flex-1">Missed</button>
+             <button id="passed-button" class="nav-button bg-green-500 flex-1">Passed</button>
+        </div>
+        <div class="flex gap-4 w-full button-row">
+             <button id="shuffle-button" class="nav-button bg-purple-500 flex-1">Shuffle Deck</button>
+             <button id="reset-button" class="nav-button bg-orange-500 flex-1">Reset State</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Data ---
+        const flashcards = [
+             // automated-penetration-testing-tools.md
+            { question: "Name three examples of proprietary automated penetration testing tools mentioned in the source.", answer: "CANVAS and Core Impact are two examples of proprietary automated penetration testing tools mentioned." },
+            { question: "Besides footprinting, scanning, and vulnerability analysis, what other offensive action can Nmap be used for?", answer: "Nmap can also be used to carry out attacks, for example, as a DoS tool." },
+            { question: "According to the source, can automated penetration testing fully replace manual testing?", answer: "No, automated testing cannot fully replace manual testing." },
+            { question: "What is one advantage of automated penetration testing in the initial stages of a penetration test?", answer: "Automated testing helps the initial analysis to understand where potential vulnerabilities exist." },
+            { question: "What is a limitation of automated penetration testing related to complex scenarios?", answer: "Automated testing often fails to work in complex scenarios." },
+            { question: "Define the Metasploit framework as described in the source.", answer: "Metasploit is a framework for building and performing exploit attacks against targets." },
+            { question: "What architectural feature of Metasploit promotes code re-use?", answer: "Metasploit has a modular architecture allowing code re-use instead of copying or re-writing code for each exploit." },
+            { question: "What is a key function of the free version of Metasploit?", answer: "The free version of Metasploit allows for developing and executing exploit code against a remote target machine." },
+            { question: "What type of automated attack targeting known vulnerabilities is mentioned as a feature of the free Metasploit version?", answer: "The free version of Metasploit offers automated exploitation of known vulnerabilities such as weak passwords for Telnet, SSH, and HTTP." },
+            { question: "What is Armitage described as in relation to Metasploit?", answer: "Armitage is described as a free and open-source GUI alternative to the paid (Pro) version of Metasploit's web interface." },
+            { question: "What is the primary function of a Metasploit payload?", answer: "A Metasploit payload provides control over an exploited target system." },
+            { question: "Describe how a Meterpreter payload typically runs on a target machine.", answer: "A Meterpreter payload runs as a DLL loaded inside of any process on a target machine and resides entirely in memory, writing nothing to disk." },
+            { question: "What is the purpose of the msfvenom tool?", answer: "msfvenom generates stand-alone payloads and combines payload generation and encoding functionalities." },
+            { question: "What is the -p flag in msfvenom used for?", answer: "The -p flag in msfvenom is used to specify the payload name, for example, -p windows/meterpreter/bind_tcp." },
+            { question: "What is the main purpose of encoding payloads using the -e flag in msfvenom?", answer: "Encoding payloads using the -e flag is used to avoid antivirus detection." },
+            { question: "What is the command to start the Metasploit console?", answer: "The command to start the Metasploit console is msfconsole." },
+            { question: "When searching for an exploit in msfconsole, is the disclosure date always the same as when the vulnerability was found?", answer: "No, the disclosure date is not always the same as when the vulnerability was found; it can be before but not published." },
+            { question: "After using an exploit in msfconsole, how can you see the available payloads?", answer: "You can see the available payloads using the show payload command." },
+            { question: "How do you set a specific payload to use in msfconsole?", answer: "You can set a payload using the set PAYLOAD <name> command." },
+            { question: "What command is used to list the required options for an exploit in msfconsole?", answer: "The show options command is used to list the required options for an exploit in msfconsole." },
+            // banner-grabbing.md
+            { question: "What type of information does banner grabbing typically reveal about a computer or its services?", answer: "Banner grabbing is used to gain banner information, which includes the name and version of a computer (e.g., OS information) or the services running on its open ports (e.g., nginx server)." },
+            { question: "What is the primary purpose of an attacker performing banner grabbing?", answer: "Banner grabbing allows attackers to exploit known vulnerabilities and form an attack plan." },
+            { question: "How can organizations prevent banner grabbing?", answer: "Banner grabbing can be prevented by disabling banners and by hiding web page extensions." },
+            { question: "Describe the methodology of passive banner grabbing.", answer: "Passive banner grabbing uses sniffing to determine the operating system by analyzing error messages, sniffing network traffic, and examining page extensions." },
+            { question: "How does active banner grabbing differ from passive banner grabbing?", answer: "Active banner grabbing involves sending a packet to the OS and then analyzing the responses, while passive banner grabbing relies on observation without direct interaction." },
+            { question: "What is one distinguishing characteristic of different operating systems that active banner grabbing relies on?", answer: "Different OSes have different TCP/IP stack implementations, such as varying values of TTL and TCP window size in the IP header of the first packet." },
+            { question: "Name three common ports that are often targets of active banner grabbing.", answer: "HTTP (80), FTP (21), and SMTP (25) are common ports for active banner grabbing." },
+            { question: "What are some tools that can be used for active banner grabbing?", answer: "Telnet, Nmap, and Netcat are tools used for active banner grabbing." },
+            { question: "What Nmap command option is used for automatic OS fingerprinting, which is a form of banner grabbing?", answer: "The Nmap option -O is used for automatic OS fingerprinting." },
+            { question: "What type of networking utility is Netcat?", answer: "Netcat is a networking utility for reading from and writing to network connections using TCP or UDP." },
+            { question: "What information might an FTP server banner typically return, providing insights to an attacker?", answer: "An FTP server banner might return something like \"Welcome to XXX FTP Server,\" giving insights about the owner and that it's an FTP server." },
+            { question: "Describe the steps to perform active banner grabbing on an HTTP server using Netcat.", answer: "First, use nc <IP address> 80, then type GET /index.html HTTP 1.0 or HEAD / HTTP/1.1 and press [ENTER]." },
+            { question: "What useful information can HTTP headers often reveal during banner grabbing?", answer: "HTTP headers can reveal information such as the server software being used, for example, Server: Apache/2.4.6 (CentOS)." },
+            { question: "What is CryptCat in relation to Netcat?", answer: "CryptCat is the encrypted version of Netcat." },
+            { question: "What command using Netcat would you use to check if FTP port 21 is open on a given IP address?", answer: "nc 178.128.203.1 21" },
+            { question: "What Nmap command can be used to find out open ports on a target IP address before using Netcat for banner grabbing?", answer: "nmap 178.128.203.1 can be used to find out open ports." },
+            { question: "What is the 'banner information' comprised of in the context of banner grabbing?", answer: "Banner information equals the name plus the version of a computer or service." },
+            { question: "Analyzing what aspects of network traffic is part of passive banner grabbing for OS detection?", answer: "Analyzing error messages and sniffing the traffic on the network are parts of passive banner grabbing." },
+            { question: "How do different TCP/IP stack implementations in operating systems aid in active banner grabbing?", answer: "Differences in values like TTL (time to live) and TCP window size in the IP header are unique to each OS and can be identified through active probing." },
+            { question: "Besides Telnet and Netcat, what other tool mentioned can be used for active banner grabbing?", answer: "Nmap can also be used for active banner grabbing." },
+            // bypassing-ids-and-firewall.md
+            { question: "What is the role of a proxy server in network communication?", answer: "A proxy server acts as an intermediary for requests from clients to servers." },
+            { question: "What is the communication flow when a proxy server is used?", answer: "The communication flow is client <--> proxy <--> server." },
+            { question: "For what purpose can free public proxies be used, according to the source?", answer: "Free public proxies can be used for educational purposes." },
+            { question: "What is a potential risk associated with using public proxies mentioned in the source?", answer: "Public proxies can be malicious, for example, by injecting stuff into your traffic." },
+            { question: "What is a recommended practice regarding proxies for security purposes?", answer: "It is recommended to have your own proxies set up." },
+            { question: "How can proxy servers be used by defenders to protect an internal network?", answer: "Proxy servers can be used as a firewall to protect the internal network." },
+            { question: "How do proxy servers help in hiding the IP addresses of internal servers?", answer: "Proxy servers act as an IP address multiplexer, hiding the IP addresses of internal servers." },
+            { question: "What methods are mentioned for anonymizing web surfing to some extent?", answer: "VPN services or Tor can anonymize web surfing to some extent." },
+            { question: "Name two mobile tools mentioned that can be used for proxying.", answer: "Shadowsocks (cross-platform sock5 proxy) and proxydroid (http / sock4 / sock5 on Android) are mentioned." },
+            { question: "Besides security and IP hiding, what other usage of proxy servers is mentioned?", answer: "Proxy servers can be used for filtering unwanted content such as ads." },
+            { question: "How can proxy servers help in saving bandwidth on local networks?", answer: "The source does not explicitly detail how proxy servers save bandwidth, but filtering content like ads could contribute to reduced bandwidth usage." },
+            { question: "What is a VPN service described as in the context of anonymity?", answer: "A VPN service is mentioned as a way to anonymize web surfing to some extent." },
+            { question: "What type of proxy is Shadowsocks?", answer: "Shadowsocks is a cross-platform sock5 proxy." },
+            { question: "What protocols does proxydroid support for proxying on Android?", answer: "Proxydroid supports http, sock4, and sock5 protocols." },
+            { question: "What is Tor mentioned as in the context of bypassing security measures?", answer: "Tor is mentioned as a way to anonymize web surfing to some extent, which can be a method to bypass certain restrictions." },
+            { question: "If you are using a public proxy, what kind of malicious activity should you be cautious of?", answer: "Be cautious of malicious activities like the proxy injecting stuff into your traffic." },
+            { question: "What is one reason why defenders might use a proxy server?", answer: "Defenders might use a proxy server as a firewall to protect the internal network." },
+            { question: "How does a proxy server act as an IP address multiplexer?", answer: "It hides the individual IP addresses of internal servers behind its own IP address." },
+            { question: "What kind of content filtering is mentioned as a use for proxy servers?", answer: "Filtering unwanted content such as ads is mentioned." },
+            { question: "What is a key difference between setting up your own proxy and using a public one in terms of security?", answer: "Setting up your own proxy gives you more control and reduces the risk of malicious activity compared to using potentially untrusted public proxies." },
+             // common-vulnerabilities.md
+            { question: "How can the Shellshock vulnerability be detected using Nmap?", answer: "The Shellshock vulnerability can be detected using the Shellshock script with the Nmap scripting engine, for example, with the command nmap -sV -p 80 --script http-shellshock --script-args uri=/cgi-bin/blabla.sh,cmd=ls 192.168.122.17." },
+            { question: "What does the -sV flag in the Nmap command for detecting Shellshock do?", answer: "The -sV flag in Nmap detects services and versions." },
+            { question: "What is the Heartbleed vulnerability, and in which library was it found?", answer: "Heartbleed is a bug in the OpenSSL library, a widely used implementation of TLS." },
+            { question: "When was the Heartbleed vulnerability introduced and patched?", answer: "The Heartbleed vulnerability was introduced and patched in April 2014." },
+            { question: "What type of programming error caused the Heartbleed vulnerability?", answer: "Heartbleed resulted from improper input validation (no boundary check) in the TLS heartbeat extension, classified as a buffer over-read." },
+            { question: "Describe the flow of a malicious Heartbleed attack.", answer: "In a malicious Heartbeat flow, a client sends a request like \"Send me 500 letter word: 'bird'\", and the vulnerable server, without proper validation, sends back 'bird' followed by 500 bytes from its memory, potentially including sensitive data." },
+            { question: "What is Reverse Heartbleed?", answer: "Reverse Heartbleed is when a malicious server exploits the Heartbleed vulnerability to read from client memory." },
+            { question: "How can Nmap be used to test for the Heartbleed vulnerability?", answer: "Nmap can be used with the command nmap -p 443 --script ssl-heartbleed <target> to test for Heartbleed." },
+            { question: "What Metasploit module can be used to exploit the Heartbleed vulnerability?", answer: "The openssl_heartbleed module in Metasploit can be used." },
+            { question: "What does FREAK stand for in the context of SSL/TLS vulnerabilities?", answer: "FREAK stands for \"Factoring RSA Export Keys\"." },
+            { question: "What type of attack is FREAK, and what does it force?", answer: "FREAK is a Man-in-the-middle attack that forces a downgrade of the RSA key to a weaker length." },
+            { question: "What does the FREAK vulnerability enable attackers to do?", answer: "The FREAK vulnerability enables successful brute-force attacks." },
+            { question: "What cryptographic weakness does the FREAK attack exploit?", answer: "FREAK exploits a cryptographic weakness in the SSL/TLS protocols." },
+            { question: "What type of attacks can the SSL/TLS Renegotiation vulnerability lead to?", answer: "The SSL/TLS Renegotiation vulnerability leads to plaintext injection attacks against SSL 3.0 and all current versions of TLS." },
+            { question: "When was the vulnerability in the design of TLS, which led to the renegotiation fix, first discussed?", answer: "The vulnerability in the design of TLS was first discussed on November 4, 2009." },
+            { question: "How can you test for SSL/TLS Renegotiation vulnerability using OpenSSL?", answer: "You can use openssl s_client -connect <website>:443 and then type R for renegotiate and press [ENTER]." },
+            { question: "What is the purpose of the -p- option in Nmap when scanning for ports?", answer: "The -p- option in Nmap is used to scan for the entire port range." },
+            { question: "What is the significance of checking the \"State: NOT VULNERABLE\" output when using the ssl-heartbleed Nmap script?", answer: "It indicates that the target is not vulnerable to the Heartbleed vulnerability." },
+            { question: "What was the proposed standard (RFC number) to mitigate the SSL/TLS renegotiation vulnerability?", answer: "The proposed standard was RFC 5746." },
+            { question: "According to the source, what was the impact of the Heartbleed vulnerability?", answer: "The Heartbleed vulnerability had a big impact, with examples including the stealing of millions of patient records and hijacking accounts." },
+            // covering-tracks.md
+            { question: "Name three types of tools specifically mentioned for covering tracks.", answer: "Privacy.sexy, Auditpol, and MRU-blaster are mentioned as tools for covering tracks." },
+            { question: "What is Privacy.sexy described as, and what is its function related to covering tracks?", answer: "Privacy.sexy is described as an online/offline and open-source tool that can cleanup logs and personal activities." },
+            { question: "What is the purpose of Auditpol, and which company developed it?", answer: "Auditpol is a Microsoft tool used to manipulate audit policies." },
+            { question: "What does MRU-blaster do in the context of covering tracks?", answer: "MRU-blaster can find and remove 30,000 MRU (Most Recently Used) lists." },
+            { question: "In the context of security, what is the primary goal of covering tracks?", answer: "The primary goal of covering tracks is to hide an attacker's presence on a compromised system and avoid detection." },
+            { question: "Why might simply deleting all system logs be a suspicious action for an attacker?", answer: "Deleting all logs can be suspicious and raise alarms, making it more effective to selectively clear certain entries." },
+            { question: "Besides deleting logs, what other action related to logging is important for an attacker covering their tracks?", answer: "Ensuring that future activities are not logged by disabling auditing features is also important." },
+            { question: "What does masquerading activities involve in the context of covering tracks?", answer: "Masquerading activities involves making the attacker's actions appear similar to legitimate activities." },
+            { question: "Name two network techniques mentioned that can help attackers cover their tracks on a network.", answer: "Using reverse shells and DNS tunneling are network techniques that can help attackers cover their tracks." },
+            { question: "What is one method mentioned for hiding files on a compromised system?", answer: "Prepending a single dot to file/folder names in Linux and macOS is one method for hiding files." },
+            { question: "What is the Windows equivalent of prepending a dot to hide files?", answer: "In Windows, using the \"hidden\" file attribute (e.g., via ATTRIB +H) can hide files." },
+            { question: "What are rootkits used for in the context of covering tracks and maintaining access?", answer: "Rootkits can create backdoors and hide their presence by removing themselves from process lists or replacing system calls." },
+            { question: "What is steganography, and how can it be used for covering tracks?", answer: "Steganography hides a message within another message (like an image) and can be used to conceal hacking tools or keyloggers." },
+            { question: "What is the importance of an exit strategy for an attacker before compromising a system?", answer: "An exit strategy involves understanding the OS type, log types, and security policies of the target to effectively cover tracks." },
+            { question: "What is one example of a log or personal activity that Privacy.sexy can help clean up?", answer: "The source mentions that Privacy.sexy can cleanup logs and personal activities in general, so specific examples aren't given in this excerpt." },
+            { question: "What level of granularity does Auditpol provide for controlling system auditing?", answer: "Auditpol is a tool to manipulate audit policies, suggesting it offers control over what system activities are audited. The exact level of granularity isn't specified in this excerpt." },
+            { question: "What type of lists does MRU-blaster target for removal?", answer: "MRU-blaster targets Most Recently Used (MRU) lists for removal." },
+            { question: "Why might an attacker want to ensure their future activities are not logged on a compromised system?", answer: "To prevent their ongoing actions from being detected and traced back to them." },
+            { question: "How can using a compromised machine as a proxy help an attacker in covering their tracks?", answer: "It can lead traces back to the compromised proxy rather than the attacker's actual location." },
+            { question: "In penetration testing, what is the expectation regarding the tester's presence after the engagement?", answer: "Testers are expected to retract their presence, including deleting malware, recovering deleted files, reversing privileges, restoring settings, and removing vulnerabilities." },
+            // cracking-passwords-overview.md
+            { question: "What is the primary goal of password cracking?", answer: "The primary goal of password cracking is recovering passwords from transmitted or stored data on computer systems." },
+            { question: "Name three non-electronic password attack types mentioned in the source.", answer: "Dumpster diving, shoulder surfing, and social engineering are non-electronic password attack types." },
+            { question: "Describe a dictionary attack for password cracking.", answer: "A dictionary attack involves loading a file containing a list of passwords into a cracking program, which then checks these passwords against user accounts." },
+            { question: "What are dictionary attacks helpful for testing?", answer: "Dictionary attacks are helpful for testing against default passwords, common/weak passwords, and leaks downloaded from the internet." },
+            { question: "What is a limitation of dictionary attacks in password cracking?", answer: "A limitation is that there is no guarantee of finding the password." },
+            { question: "Describe a brute-force attack for password cracking.", answer: "A brute-force attack involves running every combination of characters until the password is cracked." },
+            { question: "What is a significant drawback of using only a brute-force attack for password cracking?", answer: "It is the slowest technique and can take years." },
+            { question: "What is a hybrid attack in password cracking?", answer: "A hybrid attack combines a dictionary attack with a brute-force attack, expanding dictionary words with guessed characters." },
+            { question: "Describe how a hybrid attack might work using an example dictionary.", answer: "If a dictionary contains \"password\" and \"hello,\" a hybrid attack with a rule to append two digits might generate guesses from \"password00\" to \"password99\" and \"hello00\" to \"hello99\"." },
+            { question: "When is a rule-based attack typically used in password cracking?", answer: "A rule-based attack is used when the attacker has some information about the password, such as its length or if it contains digits." },
+            { question: "What does password guessing involve, and how is it typically performed?", answer: "Password guessing involves manually or automatically (using dictionaries) attempting to log into the target's machine." },
+            { question: "What is a good practice when creating a password dictionary list for password guessing?", answer: "It is good to add default passwords from manufacturers to the list." },
+            { question: "How can trojans, spyware, or keyloggers help in obtaining passwords?", answer: "They can be installed on the target machine to secretly collect usernames and passwords." },
+            { question: "What are trojans designed to do besides collecting information?", answer: "Trojans are also designed to harm the system and allow attackers to remotely access the machine." },
+            { question: "What is the primary function of spyware?", answer: "Spyware is primarily designed to collect secret information." },
+            { question: "What specific data do keyloggers aim to capture?", answer: "Keyloggers are designed to send key strokes to the attacker." },
+            { question: "What is \"dumpster diving\" in the context of password cracking?", answer: "Dumpster diving involves looking for notes or anything discarded that can help in cracking the password." },
+            { question: "What is \"shoulder surfing\" in the context of password cracking?", answer: "Shoulder surfing involves observing the target while they type in their passwords, either by looking at their keyboard or screen." },
+            { question: "What is \"social engineering\" in the context of password cracking?", answer: "Social engineering involves interacting with the target to trick them into revealing their passwords." },
+            { question: "What is the slowest but most comprehensive password cracking technique mentioned?", answer: "The brute-force attack is the slowest but most comprehensive technique." },
+            // data-leakage-backup-and-recovery.md
+            { question: "What is another term for internal threats, and why are they considered significant?", answer: "Internal threats are also known as insider threats, and they are more dangerous than external threats because insiders have greater access to the company's systems." },
+            { question: "Name three methods an insider threat might use to acquire data.", answer: "Eavesdropping, shoulder surfing, and dumpster diving can be used by insider threats to acquire data." },
+            { question: "What is Data Loss Prevention (DLP), and what is its main function?", answer: "DLP is the identification and monitoring of important information that should not be shared outside the organization." },
+            { question: "What actions can DLP systems take when sensitive data is in transit?", answer: "DLP systems can block, notify the sender, or allow administrators to analyze, react to, and report sensitive data in transit." },
+            { question: "What is data backup, and what primary risk does it protect against?", answer: "Data backup is the process of making a duplicate copy of existing data, primarily protecting against data loss and corruption." },
+            { question: "What is a significant consequence of not having data backups, especially concerning ransomware?", answer: "No backup makes an organization far more susceptible to all sorts of attacks, especially ransomware." },
+            { question: "Name three types of magnetic tape characteristics relevant to data backup.", answer: "Magnetic tapes are the oldest form of backup medium, have a retention time of approximately 30 years, and require fast-forwarding to the correct file for restoration." },
+            { question: "What is a disadvantage of using magnetic tapes for incremental backups or storing a few files?", answer: "It is bad for incremental backups or storing a few files because you have to fast-forward to the specific location on the tape." },
+            { question: "What is a key limitation in verifying the functionality of magnetic tape backups?", answer: "The only way to tell if backups are working is to fully restore from the tape and check if it's correctly restored." },
+            { question: "Compare the speed of optical disks to hard drives.", answer: "Optical disks are 2 to 3 times slower than hard drives." },
+            { question: "What is a stability concern regarding hard disks compared to magnetic tapes for backups?", answer: "Hard disks have less stability than magnetic tapes." },
+            { question: "Name two advantages of SSD disks (including USB drives) as a backup medium.", answer: "SSD disks are resistant to shock and temperature." },
+            { question: "What is a key dependency of cloud storage as a backup medium?", answer: "Cloud storage depends on a stable internet connection." },
+            { question: "What is the first step in creating a data backup strategy?", answer: "The first step is to identify important data." },
+            { question: "What are two important factors to consider when choosing an appropriate backup media?", answer: "Reliability and cost (preferably cheap) are important factors." },
+            { question: "What is the difference between a cold backup and a hot backup?", answer: "A cold backup is performed while the system is not in use, whereas a hot backup is performed when the system is still being used." },
+            { question: "Name the three main options for backup locations mentioned in the source.", answer: "On-site, off-site, and cloud are the three main backup locations mentioned." },
+            { question: "What is a key advantage of using the cloud for data backup in terms of physical infrastructure?", answer: "Cloud backup requires little infrastructure, no hardware, and no maintenance." },
+            { question: "What is an incremental backup, and what is needed for a full restore when using this method?", answer: "An incremental backup backs up only the changes since the previous backup, and for a full restore, you need the initial full backup plus all subsequent incremental backups." },
+            { question: "What is the final step in a data backup strategy to ensure its effectiveness?", answer: "The final step is to perform a recovery test." },
+            // dns-enumeration.md
+            { question: "What does DNS stand for, and what is its primary function?", answer: "DNS stands for \"Domain Name System,\" and its primary function is to provide a hierarchical and decentralized naming system for resources connected to the Internet, mapping URLs to IP addresses." },
+            { question: "On which TCP/UDP port does DNS typically run?", answer: "DNS typically runs on TCP/UDP port 53." },
+            { question: "What is a DNS record, and where are DNS records stored?", answer: "A DNS record is a database record used to map a URL to an IP address, and these records are stored in zone files on DNS servers." },
+            { question: "Name four common types of DNS records mentioned in the source.", answer: "A, AAAA, MX, and NS records are common DNS record types." },
+            { question: "What is the purpose of an 'A' DNS record?", answer: "An 'A' record points a domain to an IPv4 address." },
+            { question: "What type of IP address does an 'AAAA' DNS record point to?", answer: "An 'AAAA' record points a domain to an IPv6 address." },
+            { question: "What is the function of 'MX' DNS records?", answer: "Mail eXchange (MX) records direct emails sent to a domain." },
+            { question: "What are 'NS' DNS records used for?", answer: "Name Server (NS) records are used to delegate a domain or subdomain to a set of name servers." },
+            { question: "What type of data does an 'SOA' DNS record contain?", answer: "A Start of Authority (SOA) record contains data to control the zone transfer, including the serial number, timestamps, and the mail address of the zone responsible." },
+            { question: "What is the purpose of a 'CNAME' DNS record?", answer: "A Canonical Name (CNAME) record links a subdomain to a domain's existing A or AAAA record." },
+            { question: "What is the function of a 'PTR' DNS record, and for what is it commonly used?", answer: "A Pointer (PTR) record is the opposite of an A record, pointing an IP address to a domain, and it's commonly used for spam verification for e-mail programs." },
+            { question: "What type of system information might an 'HINFO' DNS record contain?", answer: "A Host Information (HINFO) record might contain system information, including CPU and OS type." },
+            { question: "Name two countermeasures mentioned to prevent unauthorized DNS zone transfers.", answer: "Not allowing or restricting zone transfers and using split DNS are countermeasures." },
+            { question: "What is another common term for split DNS?", answer: "Split DNS is also known as split-horizon DNS, split-view DNS, or split-brain DNS." },
+            { question: "Describe the concept of split DNS.", answer: "Split DNS is the separation of internal network (intranet) DNS and public network (Internet) DNS, providing different answers based on the source IP address of the DNS request." },
+            { question: "How can split DNS be implemented?", answer: "Split DNS can be accomplished with hardware or software solutions." },
+            { question: "What type of tool is dnsrecon?", answer: "dnsrecon is an open-source Python script." },
+            { question: "What is an example of a basic command using dnsrecon to enumerate DNS records for a domain?", answer: "./dnsrecon.py -d cloudarchitecture.io is an example." },
+            { question: "Besides DNS records, what else can dnsrecon enumerate?", answer: "The source states dnsrecon enumerates DNS records and more, but doesn't specify other types of information in this excerpt." },
+            { question: "How do DNS records help users connect their websites to the outside world?", answer: "DNS records map domain names (like website addresses) to the numerical IP addresses that computers use to locate servers on the internet, thus enabling connections." },
+            // Note: Only 1 question provided for enumeration-overview.md
+            // { question: "What is the primary goal of en", answer: "..." } // Incomplete - omitting
+        ];
+
+        // --- State Variables ---
+        let currentCardIndex = 0; // Index within the current list (main or missed)
+        let isFlipped = false;
+        let shuffledIndices = []; // Order of the main deck (if shuffled)
+        let missedCardsIndices = []; // Stores ORIGINAL indices of missed cards
+        let reviewingMissed = false; // Are we in review mode?
+        let deckComplete = false; // Flag for when main deck and review are done
+
+        // --- DOM Elements ---
+        const flashcardElement = document.getElementById('flashcard');
+        const questionTextElement = document.getElementById('question-text');
+        const answerTextElement = document.getElementById('answer-text');
+        const prevButton = document.getElementById('prev-button');
+        const nextButton = document.getElementById('next-button');
+        const flipButton = document.getElementById('flip-button');
+        const shuffleButton = document.getElementById('shuffle-button');
+        const resetButton = document.getElementById('reset-button');
+        const missedButton = document.getElementById('missed-button');
+        const passedButton = document.getElementById('passed-button');
+        const cardCounterElement = document.getElementById('card-counter');
+        const progressBarElement = document.getElementById('progress-bar');
+        const progressBarContainer = document.getElementById('progress-bar-container');
+
+
+        // --- localStorage Keys ---
+        const STORAGE_KEY_INDEX = 'flashcard_currentIndex_v2'; // Updated key name
+        const STORAGE_KEY_SHUFFLED = 'flashcard_shuffledIndices_v2';
+        const STORAGE_KEY_MISSED = 'flashcard_missedIndices_v2';
+        const STORAGE_KEY_REVIEWING = 'flashcard_reviewingMissed_v2';
+        const STORAGE_KEY_DECK_COMPLETE = 'flashcard_deckComplete_v2';
+
+
+        // --- Functions ---
+
+        /**
+         * Saves the current state to localStorage.
+         */
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY_INDEX, currentCardIndex.toString());
+                localStorage.setItem(STORAGE_KEY_SHUFFLED, JSON.stringify(shuffledIndices));
+                localStorage.setItem(STORAGE_KEY_MISSED, JSON.stringify(missedCardsIndices));
+                localStorage.setItem(STORAGE_KEY_REVIEWING, reviewingMissed.toString());
+                localStorage.setItem(STORAGE_KEY_DECK_COMPLETE, deckComplete.toString());
+                // console.log('State saved:', { currentCardIndex, shuffledIndices, missedCardsIndices, reviewingMissed, deckComplete });
+            } catch (e) {
+                console.error("Failed to save state to localStorage:", e);
+            }
+        }
+
+        /**
+         * Loads the state from localStorage.
+         */
+        function loadState() {
+            try {
+                const savedIndex = localStorage.getItem(STORAGE_KEY_INDEX);
+                const savedShuffled = localStorage.getItem(STORAGE_KEY_SHUFFLED);
+                const savedMissed = localStorage.getItem(STORAGE_KEY_MISSED);
+                const savedReviewing = localStorage.getItem(STORAGE_KEY_REVIEWING);
+                const savedDeckComplete = localStorage.getItem(STORAGE_KEY_DECK_COMPLETE);
+
+                // Load reviewing status first
+                reviewingMissed = savedReviewing === 'true';
+                deckComplete = savedDeckComplete === 'true';
+
+
+                // Load Missed Cards
+                if (savedMissed !== null) {
+                    const parsedMissed = JSON.parse(savedMissed);
+                    if (Array.isArray(parsedMissed) && parsedMissed.every(idx => typeof idx === 'number' && idx >= 0 && idx < flashcards.length)) {
+                        missedCardsIndices = parsedMissed;
+                    } else {
+                        console.warn("Invalid missed indices found in localStorage, resetting.");
+                        missedCardsIndices = [];
+                        reviewingMissed = false; // Can't review if list is invalid
+                        deckComplete = false;
+                    }
+                }
+
+                 // Load Shuffled Order
+                if (savedShuffled !== null) {
+                    const parsedShuffled = JSON.parse(savedShuffled);
+                     if (Array.isArray(parsedShuffled) && parsedShuffled.length === flashcards.length && parsedShuffled.every(idx => typeof idx === 'number' && idx >= 0 && idx < flashcards.length)) {
+                        shuffledIndices = parsedShuffled;
+                    } else {
+                         console.warn("Invalid or mismatched shuffled indices found in localStorage, resetting shuffle.");
+                         shuffledIndices = [];
+                         // Don't reset reviewingMissed here, it depends on missedCardsIndices
+                    }
+                }
+
+
+                // Load Current Index - depends on whether we are reviewing or not
+                 if (savedIndex !== null) {
+                    const parsedIndex = parseInt(savedIndex, 10);
+                    const maxIndex = reviewingMissed ? missedCardsIndices.length : flashcards.length;
+
+                    if (!isNaN(parsedIndex) && parsedIndex >= 0 && parsedIndex < maxIndex) {
+                         currentCardIndex = parsedIndex;
+                    } else {
+                        console.warn(`Invalid index (${parsedIndex}) for current mode found in localStorage, resetting to 0.`);
+                        currentCardIndex = 0;
+                    }
+                }
+
+                 // If deck was marked complete, ensure index reflects that state
+                if (deckComplete) {
+                     currentCardIndex = reviewingMissed ? missedCardsIndices.length : flashcards.length;
+                }
+
+
+                // console.log('State loaded:', { currentCardIndex, shuffledIndices, missedCardsIndices, reviewingMissed, deckComplete });
+            } catch (e) {
+                console.error("Failed to load state from localStorage:", e);
+                resetState(false); // Reset state without confirmation on load error
+            }
+        }
+
+        /**
+         * Resets the state completely.
+         * @param {boolean} [confirmReset=true] - Whether to ask for confirmation.
+         */
+        function resetState(confirmReset = true) {
+            if (confirmReset && !confirm("Are you sure you want to reset all progress and shuffle status?")) {
+                return;
+            }
+            try {
+                localStorage.removeItem(STORAGE_KEY_INDEX);
+                localStorage.removeItem(STORAGE_KEY_SHUFFLED);
+                localStorage.removeItem(STORAGE_KEY_MISSED);
+                localStorage.removeItem(STORAGE_KEY_REVIEWING);
+                localStorage.removeItem(STORAGE_KEY_DECK_COMPLETE);
+                console.log("localStorage state cleared.");
+            } catch (e) {
+                 console.error("Failed to clear state from localStorage:", e);
+            }
+            // Reset variables
+            currentCardIndex = 0;
+            shuffledIndices = [];
+            missedCardsIndices = [];
+            reviewingMissed = false;
+            deckComplete = false;
+            isFlipped = false;
+            showCard(); // Update display immediately
+        }
+
+        /**
+         * Updates the progress bar display.
+         */
+        function updateProgressBar() {
+            if (deckComplete) {
+                progressBarElement.style.width = '100%';
+                progressBarElement.textContent = 'Complete!';
+                progressBarElement.classList.add('bg-green-500'); // Use green for complete
+                progressBarElement.classList.remove('bg-blue-500');
+                return;
+            }
+
+            const totalCardsInCurrentList = reviewingMissed ? missedCardsIndices.length : flashcards.length;
+            const currentPosition = currentCardIndex; // Index is 0-based
+
+            let percentage = 0;
+            if (totalCardsInCurrentList > 0) {
+                // Calculate progress based on *starting* the current card
+                percentage = (currentPosition / totalCardsInCurrentList) * 100;
+            } else if (reviewingMissed && missedCardsIndices.length === 0) {
+                 percentage = 100; // If review mode started but no cards, it's complete
+            }
+
+
+            progressBarElement.style.width = `${percentage}%`;
+            progressBarElement.textContent = `${Math.round(percentage)}%`;
+            progressBarElement.classList.remove('bg-green-500');
+            progressBarElement.classList.add('bg-blue-500'); // Default blue
+        }
+
+
+        /**
+         * Updates the text content and state of the flashcard display.
+         */
+        function showCard() {
+            // Handle deck completion state
+            const totalInDeck = flashcards.length;
+            const totalMissed = missedCardsIndices.length;
+            const totalInReview = missedCardsIndices.length;
+
+            if (deckComplete) {
+                flashcardElement.classList.add('hidden'); // Hide card area
+                cardCounterElement.textContent = "Deck Complete!";
+                updateProgressBar();
+                // Disable most buttons
+                prevButton.disabled = true;
+                nextButton.disabled = true;
+                flipButton.disabled = true;
+                missedButton.disabled = true;
+                passedButton.disabled = true;
+                shuffleButton.disabled = false; // Allow shuffle/reset
+                resetButton.disabled = false;
+                return; // Don't show a card
+            } else {
+                 flashcardElement.classList.remove('hidden'); // Ensure card area is visible
+                 // Enable buttons that might have been disabled
+                 flipButton.disabled = false;
+                 missedButton.disabled = false;
+                 passedButton.disabled = false;
+                 shuffleButton.disabled = false;
+                 resetButton.disabled = false;
+            }
+
+            let card;
+            let cardIndexToDisplay; // The ORIGINAL index from the flashcards array
+            let currentListTotal;
+            let counterPrefix;
+
+            if (reviewingMissed) {
+                // --- Reviewing Missed Cards ---
+                currentListTotal = totalInReview;
+                counterPrefix = `Reviewing Missed`;
+
+                if (currentCardIndex >= totalInReview) {
+                     // This should ideally be caught by deckComplete, but as a fallback
+                     console.log("Review complete.");
+                     deckComplete = true;
+                     saveState();
+                     showCard(); // Re-run showCard to display completion state
+                     return;
+                }
+
+                cardIndexToDisplay = missedCardsIndices[currentCardIndex];
+                card = flashcards[cardIndexToDisplay];
+
+            } else {
+                // --- Normal Deck Mode ---
+                currentListTotal = totalInDeck;
+                counterPrefix = `Card`;
+                cardIndexToDisplay = shuffledIndices.length > 0 ? shuffledIndices[currentCardIndex] : currentCardIndex;
+                card = flashcards[cardIndexToDisplay];
+            }
+
+            // Validate card index just in case
+             if (cardIndexToDisplay < 0 || cardIndexToDisplay >= flashcards.length || !card) {
+                 console.error(`Invalid card index derived: ${cardIndexToDisplay}. Resetting state.`);
+                 resetState(false);
+                 return;
+             }
+
+
+            // Update the question and answer text
+            questionTextElement.textContent = card.question;
+            answerTextElement.textContent = card.answer;
+
+            // Reset flip state
+            if (flashcardElement.classList.contains('flipped')) {
+                flashcardElement.classList.remove('flipped');
+            }
+            isFlipped = false;
+
+            // Update the card counter
+            cardCounterElement.textContent = `${counterPrefix} ${currentCardIndex + 1} of ${currentListTotal}`;
+
+            // Update button states
+            prevButton.disabled = currentCardIndex === 0;
+            nextButton.disabled = currentCardIndex >= currentListTotal - 1; // Disable next if on the last card of the current list
+
+            // Update progress bar
+            updateProgressBar();
+        }
+
+        /**
+         * Toggles the display between the question and the answer.
+         */
+        function flipCard() {
+             if (deckComplete) return; // Don't flip if deck is complete
+            flashcardElement.classList.toggle('flipped');
+            isFlipped = !isFlipped;
+        }
+
+        /**
+         * Moves to the next card or transitions to review/completion.
+         */
+        function goToNextCard() {
+            const currentListTotal = reviewingMissed ? missedCardsIndices.length : flashcards.length;
+
+            if (currentCardIndex < currentListTotal - 1) {
+                // --- Still cards left in the current list ---
+                currentCardIndex++;
+            } else {
+                 // --- Reached the end of the current list ---
+                 if (!reviewingMissed) {
+                     // --- End of Main Deck ---
+                     if (missedCardsIndices.length > 0) {
+                         // --- Transition to Review Mode ---
+                         reviewingMissed = true;
+                         currentCardIndex = 0; // Start review from the beginning
+                         console.log("Starting review of missed cards.");
+                     } else {
+                         // --- No missed cards, Deck Complete ---
+                         deckComplete = true;
+                         currentCardIndex++; // Move index past the end
+                         console.log("Deck complete!");
+                     }
+                 } else {
+                     // --- End of Review ---
+                     deckComplete = true;
+                     currentCardIndex++; // Move index past the end
+                     console.log("Review complete!");
+                 }
+            }
+
+            saveState();
+            showCard();
+        }
+
+        /**
+         * Moves to the previous card in the current list.
+         */
+        function goToPrevCard() {
+             if (deckComplete) return; // Cannot go back if deck complete
+
+            if (currentCardIndex > 0) {
+                currentCardIndex--;
+                saveState();
+                showCard();
+            }
+             // Note: Does not transition back from review to main deck automatically.
+        }
+
+        /**
+         * Handles the logic when the "Missed" button is clicked.
+         */
+        function handleMissed() {
+             if (deckComplete) return;
+
+             let originalIndex;
+             if (reviewingMissed) {
+                 originalIndex = missedCardsIndices[currentCardIndex];
+                 // Keep it in the missed list (no action needed on the list itself)
+             } else {
+                 // Get the original index from the main deck
+                 originalIndex = shuffledIndices.length > 0 ? shuffledIndices[currentCardIndex] : currentCardIndex;
+                 // Add to missed list if not already there
+                 if (!missedCardsIndices.includes(originalIndex)) {
+                     missedCardsIndices.push(originalIndex);
+                     console.log(`Card ${originalIndex + 1} marked as missed.`);
+                 }
+             }
+             goToNextCard(); // Move to the next card after marking
+        }
+
+        /**
+         * Handles the logic when the "Passed" button is clicked.
+         */
+        function handlePassed() {
+             if (deckComplete) return;
+
+             if (reviewingMissed) {
+                 // If reviewing, remove the card from the missed list
+                 const originalIndex = missedCardsIndices[currentCardIndex];
+                 const indexInMissedList = missedCardsIndices.indexOf(originalIndex);
+                 if (indexInMissedList > -1) {
+                     missedCardsIndices.splice(indexInMissedList, 1);
+                     console.log(`Card ${originalIndex + 1} removed from missed list.`);
+                     // Don't increment currentCardIndex here, as the list shrinks.
+                     // goToNextCard will handle moving correctly.
+                     // Adjust currentCardIndex if necessary (though goToNextCard handles end-of-list)
+                     // No, let goToNext handle it. If it was the last card, it moves to completion.
+                 }
+             }
+             // Always move to the next card, whether in main deck or review
+             goToNextCard();
+        }
+
+
+        /**
+         * Shuffles the main deck order.
+         */
+        function shuffleCards() {
+            // Reset progress completely when shuffling
+            resetState(false); // Reset without confirmation
+
+            // Fisher-Yates (aka Knuth) Shuffle Algorithm
+            shuffledIndices = Array.from(flashcards.keys());
+            for (let i = shuffledIndices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledIndices[i], shuffledIndices[j]] = [shuffledIndices[j], shuffledIndices[i]];
+            }
+
+            // Start from the beginning of the shuffled deck
+            currentCardIndex = 0;
+            reviewingMissed = false; // Ensure not in review mode
+            deckComplete = false; // Deck is no longer complete
+            missedCardsIndices = []; // Clear missed cards on shuffle
+
+            saveState(); // Save the new shuffled state
+            showCard();
+            console.log("Deck shuffled and progress reset.");
+        }
+
+
+        // --- Event Listeners ---
+        flashcardElement.addEventListener('click', flipCard);
+        flipButton.addEventListener('click', flipCard);
+        nextButton.addEventListener('click', goToNextCard); // Use the unified function
+        prevButton.addEventListener('click', goToPrevCard); // Use the unified function
+        shuffleButton.addEventListener('click', shuffleCards);
+        resetButton.addEventListener('click', () => resetState(true)); // Reset with confirmation
+        missedButton.addEventListener('click', handleMissed);
+        passedButton.addEventListener('click', handlePassed);
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (event) => {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
+
+            // Map keys to actions
+            switch (event.key) {
+                case 'ArrowRight':
+                    nextButton.click(); // Simulate button click to use unified logic
+                    break;
+                case 'ArrowLeft':
+                     prevButton.click(); // Simulate button click
+                    break;
+                case ' ': // Space bar
+                case 'ArrowUp':
+                case 'ArrowDown':
+                    event.preventDefault();
+                    flipButton.click(); // Simulate button click
+                    break;
+                 case 'm': // M for Missed
+                 case 'M':
+                     missedButton.click();
+                     break;
+                 case 'p': // P for Passed
+                 case 'P':
+                     passedButton.click();
+                     break;
+            }
+        });
+
+        // --- Initial Setup ---
+        loadState(); // Load saved state first
+        showCard(); // Display card based on loaded state
+
+    </script>
+
+</body>
+</html>
